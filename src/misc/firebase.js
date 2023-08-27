@@ -6,6 +6,7 @@ import 'firebase/storage';
 const config = {
   apiKey: 'AIzaSyBe3nx1UBha3eUEs-L3AwQVpZUHDBi3rNo',
   authDomain: 'chat-web-app-8e6ad.firebaseapp.com',
+  databaseURL: 'https://chat-web-app-8e6ad-default-rtdb.firebaseio.com/',
   projectId: 'chat-web-app-8e6ad',
   storageBucket: 'chat-web-app-8e6ad.appspot.com',
   messagingSenderId: '528468501027',
