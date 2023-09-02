@@ -4,6 +4,7 @@ import { ButtonToolbar, Icon } from 'rsuite';
 import { Link } from 'react-router-dom';
 import { useMediaQuery } from '../../../misc/customhooks';
 import RoomInfoBtnModal from './RoomInfoBtnModal';
+import EditRoomBtnDrawer from './EditRoomBtnDrawer';
 const Top = () => {
   const name = useCurrentRoom(v => v.name);
   const isMobile = useMediaQuery('(max-width:992px');
@@ -24,7 +25,9 @@ const Top = () => {
           />
           <span className="text-disappear">{name}</span>
         </h4>
-        <ButtonToolbar className="white-space:no-wrap">todo</ButtonToolbar>
+        <ButtonToolbar className="white-space:no-wrap">
+          <EditRoomBtnDrawer />
+        </ButtonToolbar>
       </div>
       <div className="d-flex justify-content-between align-items-center">
         <span>todo</span>
