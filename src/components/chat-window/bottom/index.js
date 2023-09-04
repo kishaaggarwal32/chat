@@ -12,7 +12,7 @@ function assembleMessage(profile, chatId) {
       name: profile.name,
       uid: profile.uid,
       createdAt: profile.createdAt,
-      ...Bottom(profile.avatar ? { avatar: profile.avatar } : {}),
+      ...(profile.avatar ? { avatar: profile.avatar } : {}),
     },
     createdAt: firebase.database.ServerValue.TIMESTAMP,
   };
@@ -41,7 +41,7 @@ const Bottom = () => {
 
     const messageId = database.ref('messages').push().key;
     updates[`/messages/${messageId}`] = msgData;
-    updates[`/rooms/${chatId}/ lastMessage`] = {
+    updates[`/rooms/${chatId}/lastMessage`] = {
       ...msgData,
       msgId: messageId,
     };

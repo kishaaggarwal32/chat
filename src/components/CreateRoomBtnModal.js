@@ -48,7 +48,7 @@ const CreateRoomBtnModal = () => {
     };
 
     try {
-      await database.ref('rooms').push(newRoomData);
+      await database.ref('/rooms').push(newRoomData);
       Alert.info(`${formValue.name} has been created`, 4000);
       setIsLoading(false);
       setFormValue(INITIAL_FORM);
