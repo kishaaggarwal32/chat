@@ -13,7 +13,7 @@ import { useModalState } from '../misc/customhooks';
 import { useCallback, useState, useRef } from 'react';
 
 import firebase from 'firebase/app';
-import { database } from '../misc/firebase';
+import { auth, database } from '../misc/firebase';
 
 const { StringType } = Schema.Types;
 
@@ -42,10 +42,13 @@ const CreateRoomBtnModal = () => {
     const newRoomData = {
       ...formValue,
       createdAt: firebase.database.ServerValue.TIMESTAMP,
+      admins: {
+        [auth.currentUser.uid]: true,
+      },
     };
 
     try {
-      await database.ref('/rooms/room_id').push(newRoomData);
+      await database.ref('rooms').push(newRoomData);
       Alert.info(`${formValue.name} has been created`, 4000);
       setIsLoading(false);
       setFormValue(INITIAL_FORM);

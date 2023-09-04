@@ -6,7 +6,7 @@ import {
   Switch,
   useRouteMatch,
 } from 'react-router-dom/cjs/react-router-dom.min';
-import Chat from '../Chat';
+import Chat from '../Home/Chat';
 import { useMediaQuery } from '../../misc/customhooks';
 
 const Home = () => {
