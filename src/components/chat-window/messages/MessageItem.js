@@ -10,7 +10,7 @@ import { useHover, useMediaQuery } from '../../../misc/customhooks';
 import IconBtnControl from './IconBtnControl';
 
 const MessageItem = ({ message, handleAdmin, handleLike }) => {
-  const { author, createdAt, text, likes, likeCount } = message;
+  const { author, createdAt, text, likes, likeCount, handleDelete } = message;
   const [selfRef, isHovered] = useHover();
   const isMobile = useMediaQuery('(max-width:992 px)');
   const isAdmin = useCurrentRoom(v => v.isAdmin);
@@ -61,6 +61,14 @@ const MessageItem = ({ message, handleAdmin, handleLike }) => {
           onClick={() => handleLike(message.id)}
           badgeContent={likeCount}
         />
+        {isAuthor && (
+          <IconBtnControl
+            isVisible={canShowIcons}
+            iconName="close"
+            tooltip="Delete this message"
+            onClick={() => handleDelete(message.id)}
+          />
+        )}
       </div>
       <div>
         <span className="word-break-all">{text}</span>
