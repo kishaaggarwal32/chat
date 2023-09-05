@@ -1,69 +1,116 @@
-import { useCallback, useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom/cjs/react-router-dom.min';
-import { auth, database, storage } from '../../../misc/firebase';
-import { groupBy, transformToArrayWithId } from '../../../misc/helpers';
-import MessageItem from './MessageItem';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { useParams } from 'react-router';
 import { Alert, Button } from 'rsuite';
+import {
+  ref as dbRef,
+  runTransaction,
+  off,
+  onValue,
+  query,
+  orderByChild,
+  limitToLast,
+  equalTo,
+  update,
+} from 'firebase/database';
+import { deleteObject, ref as storageRef } from 'firebase/storage';
+import { database, auth, storage } from '../../../misc/firebase';
+import { transformToArrWithId, groupBy } from '../../../misc/helpers';
+import MessageItem from './MessageItem';
+
 const PAGE_SIZE = 15;
-const messagesRef = database.ref('/messages');
+const messagesRef = dbRef(database, '/messages');
+
+function shouldScrollToBottom(node, threshold = 30) {
+  const percentage =
+    (100 * node.scrollTop) / (node.scrollHeight - node.clientHeight) || 0;
+
+  return percentage > threshold;
+}
+
 const Messages = () => {
   const { chatId } = useParams();
   const [messages, setMessages] = useState(null);
   const [limit, setLimit] = useState(PAGE_SIZE);
+  const selfRef = useRef();
+
   const isChatEmpty = messages && messages.length === 0;
   const canShowMessages = messages && messages.length > 0;
+
   const loadMessages = useCallback(
-    limitToLast => {
-      messagesRef.off();
-      messagesRef
-        .orderByChild('roomId')
-        .equalTo(chatId)
-        .limitToLast(
-          limitToLast ||
-            (PAGE_SIZE && (
-              <li className="text-center mt-2 mb-2">
-                <Button onClick={onLoadMore} color="green">
-                  Load more
-                </Button>
-              </li>
-            ))
-        )
-        .on('value', snap => {
-          const data = transformToArrayWithId(snap.val());
+    limitToUse => {
+      const node = selfRef.current;
+
+      off(messagesRef);
+
+      onValue(
+        query(
+          messagesRef,
+          orderByChild('roomId'),
+          equalTo(chatId),
+          limitToLast(limitToUse || PAGE_SIZE)
+        ),
+        snap => {
+          const data = transformToArrWithId(snap.val());
           setMessages(data);
-        });
+
+          if (shouldScrollToBottom(node)) {
+            node.scrollTop = node.scrollHeight;
+          }
+        }
+      );
+
       setLimit(p => p + PAGE_SIZE);
     },
-    [chatId, onLoadMore]
+    [chatId]
   );
+
   const onLoadMore = useCallback(() => {
+    const node = selfRef.current;
+    const oldHeight = node.scrollHeight;
+
     loadMessages(limit);
+
+    setTimeout(() => {
+      const newHeight = node.scrollHeight;
+      node.scrollTop = newHeight - oldHeight;
+    }, 200);
   }, [loadMessages, limit]);
 
   useEffect(() => {
+    const node = selfRef.current;
+
     loadMessages();
 
+    setTimeout(() => {
+      node.scrollTop = node.scrollHeight;
+    }, 200);
+
     return () => {
-      messagesRef.off('value');
+      off(messagesRef);
     };
   }, [loadMessages]);
 
   const handleAdmin = useCallback(
     async uid => {
-      const adminsRef = database.ref(`/rooms/${chatId}/admins`);
       let alertMsg;
-      await adminsRef.transaction(admins => {
-        if (admins) {
-          if (admins[uid]) {
-            admins[uid] = null;
-            alertMsg = 'Admin permission removed';
-          } else {
-            admins[uid] = true;
-            alertMsg = 'Admin permission granted';
+
+      await runTransaction(
+        dbRef(database, `/rooms/${chatId}/admins`),
+        admins => {
+          if (admins) {
+            if (admins[uid]) {
+              admins[uid] = null;
+              alertMsg = 'Admin permission removed';
+            } else {
+              admins[uid] = true;
+              alertMsg = 'Admin permission granted';
+            }
           }
+
+          return admins;
         }
-        return admins;
-      });
+      );
+
       Alert.info(alertMsg, 4000);
     },
     [chatId]
@@ -71,9 +118,11 @@ const Messages = () => {
 
   const handleLike = useCallback(async msgId => {
     const { uid } = auth.currentUser;
-    const messageRef = database.ref(`/messages/${msgId}`);
+    const messageRef = dbRef(database, `/messages/${msgId}`);
+
     let alertMsg;
-    await messageRef.transaction(msg => {
+
+    await runTransaction(messageRef, msg => {
       if (msg) {
         if (msg.likes && msg.likes[uid]) {
           msg.likeCount -= 1;
@@ -85,23 +134,29 @@ const Messages = () => {
           if (!msg.likes) {
             msg.likes = {};
           }
+
           msg.likes[uid] = true;
-          alertMsg = 'Like Added';
+          alertMsg = 'Like added';
         }
       }
+
       return msg;
     });
+
     Alert.info(alertMsg, 4000);
   }, []);
 
   const handleDelete = useCallback(
     async (msgId, file) => {
-      if (!window.confirm('delete this msg?')) {
+      // eslint-disable-next-line no-alert
+      if (!window.confirm('Delete this message?')) {
         return;
       }
+
       const isLast = messages[messages.length - 1].id === msgId;
 
       const updates = {};
+
       updates[`/messages/${msgId}`] = null;
 
       if (isLast && messages.length > 1) {
@@ -110,12 +165,14 @@ const Messages = () => {
           msgId: messages[messages.length - 2].id,
         };
       }
+
       if (isLast && messages.length === 1) {
         updates[`/rooms/${chatId}/lastMessage`] = null;
       }
 
       try {
-        await database.ref().update(updates);
+        await update(dbRef(database), updates);
+
         Alert.info('Message has been deleted');
       } catch (err) {
         return Alert.error(err.message);
@@ -123,8 +180,8 @@ const Messages = () => {
 
       if (file) {
         try {
-          const fileRef = await storage.refFromURL(file.url);
-          await fileRef.delete();
+          const fileRef = storageRef(storage, file.url);
+          await deleteObject(fileRef);
         } catch (err) {
           Alert.error(err.message);
         }
@@ -132,18 +189,21 @@ const Messages = () => {
     },
     [chatId, messages]
   );
+
   const renderMessages = () => {
     const groups = groupBy(messages, item =>
       new Date(item.createdAt).toDateString()
     );
 
     const items = [];
+
     Object.keys(groups).forEach(date => {
       items.push(
         <li key={date} className="text-center mb-1 padded">
           {date}
         </li>
       );
+
       const msgs = groups[date].map(msg => (
         <MessageItem
           key={msg.id}
@@ -153,13 +213,23 @@ const Messages = () => {
           handleDelete={handleDelete}
         />
       ));
+
       items.push(...msgs);
     });
+
     return items;
   };
+
   return (
-    <ul className="msg-list custom-scroll">
-      {isChatEmpty && <li>No messages yet </li>}
+    <ul ref={selfRef} className="msg-list custom-scroll">
+      {messages && messages.length >= PAGE_SIZE && (
+        <li className="text-center mt-2 mb-2">
+          <Button onClick={onLoadMore} color="green">
+            Load more
+          </Button>
+        </li>
+      )}
+      {isChatEmpty && <li>No messages yet</li>}
       {canShowMessages && renderMessages()}
     </ul>
   );
