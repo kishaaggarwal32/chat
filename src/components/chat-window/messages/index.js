@@ -3,26 +3,50 @@ import { useParams } from 'react-router-dom/cjs/react-router-dom.min';
 import { auth, database, storage } from '../../../misc/firebase';
 import { groupBy, transformToArrayWithId } from '../../../misc/helpers';
 import MessageItem from './MessageItem';
-import { Alert } from 'rsuite';
-
+import { Alert, Button } from 'rsuite';
+const PAGE_SIZE = 15;
+const messagesRef = database.ref('/messages');
 const Messages = () => {
   const { chatId } = useParams();
   const [messages, setMessages] = useState(null);
+  const [limit, setLimit] = useState(PAGE_SIZE);
   const isChatEmpty = messages && messages.length === 0;
   const canShowMessages = messages && messages.length > 0;
+  const loadMessages = useCallback(
+    limitToLast => {
+      messagesRef.off();
+      messagesRef
+        .orderByChild('roomId')
+        .equalTo(chatId)
+        .limitToLast(
+          limitToLast ||
+            (PAGE_SIZE && (
+              <li className="text-center mt-2 mb-2">
+                <Button onClick={onLoadMore} color="green">
+                  Load more
+                </Button>
+              </li>
+            ))
+        )
+        .on('value', snap => {
+          const data = transformToArrayWithId(snap.val());
+          setMessages(data);
+        });
+      setLimit(p => p + PAGE_SIZE);
+    },
+    [chatId, onLoadMore]
+  );
+  const onLoadMore = useCallback(() => {
+    loadMessages(limit);
+  }, [loadMessages, limit]);
+
   useEffect(() => {
-    const messagesRef = database.ref('/messages');
-    messagesRef
-      .orderByChild('roomId')
-      .equalTo(chatId)
-      .on('value', snap => {
-        const data = transformToArrayWithId(snap.val());
-        setMessages(data);
-      });
+    loadMessages();
+
     return () => {
       messagesRef.off('value');
     };
-  }, [chatId]);
+  }, [loadMessages]);
 
   const handleAdmin = useCallback(
     async uid => {
