@@ -47,7 +47,7 @@ const Messages = () => {
 
   const handleLike = useCallback(async msgId => {
     const { uid } = auth.currentUser;
-    const messageRef = database.ref(`/messages /${msgId}`);
+    const messageRef = database.ref(`/messages/${msgId}`);
     let alertMsg;
     await messageRef.transaction(msg => {
       if (msg) {
