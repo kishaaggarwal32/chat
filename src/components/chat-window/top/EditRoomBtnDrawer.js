@@ -4,7 +4,7 @@ import EditableInput from '../../EditableInput';
 import { useCurrentRoom } from '../../../context/current-room.context';
 import { memo } from 'react';
 import { database } from '../../../misc/firebase';
-import { useParams } from 'react-router/cjs/react-router.min';
+import { useParams } from 'react-router';
 
 const EditRoomBtnDrawer = () => {
   const { isOpen, open, close } = useModalState();
