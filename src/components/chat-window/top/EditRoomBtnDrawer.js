@@ -33,12 +33,9 @@ const EditRoomBtnDrawer = () => {
   };
   return (
     <div>
-      <Button
-        className="br-circle"
-        size="sm"
-        color="red"
-        onClick={open}
-      ></Button>
+      <Button className="br-circle" size="sm" color="red" onClick={open}>
+        A
+      </Button>
       <Drawer full={isMobile} show={isOpen} onHide={close} placement="right">
         <Drawer.Header>
           <Drawer.Title>Edit Room</Drawer.Title>
@@ -49,7 +46,6 @@ const EditRoomBtnDrawer = () => {
             onSave={onNameSave}
             label={<h6 className="mb-2">Name</h6>}
             emptyMsg="Name can not be empty"
-            wrapperClassName="mt-3"
           />
           <EditableInput
             componentClass="textarea"
@@ -57,6 +53,7 @@ const EditRoomBtnDrawer = () => {
             initialValue={description}
             onSave={onDescriptionSave}
             emptyMsg="Description can not be empty"
+            wrapperClassName="mt-3"
           />
         </Drawer.Body>
         <Drawer.Footer>
